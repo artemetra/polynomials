@@ -1,5 +1,6 @@
 from __future__ import annotations
-
+from typing import Any
+from numbers import Number
 import math
 from fractions import Fraction
 from decimal import Decimal
@@ -27,12 +28,20 @@ class Polynomial:
 
         self.degree = len(self.coeff) - 1
 
-    def coeff_and_power(self) -> tuple:
+    def sum(polynomials):
+        """Returns the sum of given polynomials."""
+        s = Polynomial([0])
+        for p in polynomials:
+            s += p
+        return s
+
+    def coeff_and_power(self) -> tuple[Any, int]:
+        """Yields tuples of coefficients and powers"""
         for idx, c in enumerate(self.coeff):
             yield (c, self.degree - idx)
 
     def _number_to_poly(num) -> Polynomial:
-        if isinstance(num, (int, float, Decimal, Fraction)):
+        if isinstance(num, Number):
             return Polynomial([num])
         else:
             return num
@@ -66,13 +75,31 @@ class Polynomial:
     def __mul__(self, other) -> Polynomial:
         other = Polynomial._number_to_poly(other)
         h = [self._term_mul(c, p) for c, p in other.coeff_and_power()]
-        s = Polynomial([0])
-        for p in h:
-            s += p
-        return s
+        return Polynomial.sum(h)
 
     def evaluate(self, x):
+        """Evaluates the polynomial at x."""
         return sum(coeff * (x**power) for coeff, power in self.coeff_and_power())
+
+    def long_division(self, divisor: Polynomial) -> tuple[Polynomial, Polynomial]:
+        """Performs polynomial long division. Returns the quotient and the remainder."""
+        quotient = Polynomial([0])
+        remainder = self
+        quotient_degree = remainder.degree - divisor.degree
+        if quotient_degree < 0:
+            raise ValueError(
+                "Cannot perform division when the dividend's degree is less than divisor's degree"
+            )
+        while remainder.degree >= divisor.degree:
+            lead_c = remainder.coeff[0]  # leading coefficient
+            current_multiple = Fraction(lead_c, divisor.degree)
+            quotient += Polynomial(
+                [current_multiple] + [0] * (remainder.degree - divisor.degree)
+            )
+            remainder -= divisor._term_mul(
+                current_multiple, remainder.degree - divisor.degree
+            )
+        return (quotient, remainder)
 
     def __str__(self) -> str:
         # Polynomial(4x¹⁰+6x⁹-7x⁸+4x⁷+2x⁶-4x⁵+6x⁴+2x³+3x²-5x+3)
@@ -95,11 +122,6 @@ class Polynomial:
         return self.__str__()
 
 
-def polynomial_sum(polynomials) -> Polynomial:
-    s = Polynomial([0])
-    for p in polynomials:
-        s += p
-    return s
-
-
-print(Polynomial([3, 3]) * Polynomial([5, 3, 6]))
+# print(Polynomial([1, -4, 6]) * Polynomial([1, 1, -1, -30]) + Polynomial([-107, 177]))
+print(Polynomial([2, 4, 4, 1]).long_division(Polynomial([1, 5])))
+print(Polynomial([2, -6, 34]) * Polynomial([1, 5]) + Polynomial([-169]))
